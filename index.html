@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f0e8">
+<title>Boundary — Cricket Stadium</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23f5f0e8'/><circle cx='16' cy='16' r='10' fill='none' stroke='%231E5EFF' stroke-width='2.5'/><circle cx='16' cy='16' r='3' fill='%231E5EFF'/></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#1E5EFF;--accent2:#4d82ff;--accent3:#adc4ff;
+  --bg:#f5f0e8;--bg2:#ede8dd;
+  --panel:rgba(255,255,255,0.82);--panel-border:rgba(30,94,255,0.18);
+  --text:#1a1e2e;--text2:#5a6080;
+  --glass-blur:blur(18px) saturate(1.6);
+}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;touch-action:none}
+
+/* ═══ TOP BAR ═══ */
+#topbar{position:fixed;top:0;left:0;right:0;height:52px;background:var(--panel);backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--panel-border);display:flex;align-items:center;gap:10px;padding:0 16px;z-index:100}
+#logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:var(--accent);white-space:nowrap;text-decoration:none;cursor:pointer}
+#logo svg{flex-shrink:0}
+#search-wrap{position:relative;flex:0 0 200px}
+#search-box{width:100%;background:rgba(30,94,255,0.06);border:1px solid var(--panel-border);border-radius:20px;padding:6px 14px;color:var(--text);font-size:12px;outline:none;transition:border .2s}
+#search-box:focus{border-color:var(--accent)}
+#search-box::placeholder{color:var(--text2)}
+#area-switcher{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+#area-switcher::-webkit-scrollbar{display:none}
+.area-btn{background:rgba(30,94,255,0.06);border:1px solid var(--panel-border);border-radius:16px;padding:5px 12px;color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s;min-height:28px}
+.area-btn.active,.area-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.spacer{flex:1}
+#clock-box{font-size:13px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;min-width:60px;text-align:center;background:rgba(30,94,255,0.06);border:1px solid var(--panel-border);border-radius:12px;padding:4px 10px}
+#weather-wrap{position:relative}
+#weather-btn{background:rgba(30,94,255,0.06);border:1px solid var(--panel-border);border-radius:16px;padding:5px 12px;color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s;min-height:28px}
+#weather-btn:hover{background:var(--accent);color:#fff}
+#weather-menu{position:absolute;top:calc(100% + 6px);right:0;background:rgba(255,255,255,0.97);border:1px solid var(--panel-border);border-radius:10px;padding:6px;display:none;min-width:150px;z-index:300;backdrop-filter:var(--glass-blur);box-shadow:0 8px 32px rgba(30,94,255,0.12)}
+#weather-menu.open{display:block}
+.weather-opt{padding:8px 12px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s}
+.weather-opt:hover,.weather-opt.active{background:rgba(30,94,255,0.1);color:var(--accent)}
+#daynight-btn{background:rgba(30,94,255,0.06);border:1px solid var(--panel-border);border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+#daynight-btn:hover{background:var(--accent);color:#fff}
+#alert-dot{width:8px;height:8px;background:#ef4444;border-radius:50%;flex-shrink:0;animation:pdot 2s infinite}
+@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+#user-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;color:#fff;flex-shrink:0}
+
+/* ═══ KPI CARDS ═══ */
+#kpi-row{position:fixed;top:62px;left:16px;display:flex;gap:10px;z-index:90}
+.kpi{background:var(--panel);backdrop-filter:var(--glass-blur);border:1px solid var(--panel-border);border-radius:14px;padding:12px 18px;min-width:150px;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(30,94,255,0.06)}
+.kpi:hover{border-color:var(--accent);transform:translateY(-2px)}
+.kpi-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.kpi-val{font-size:24px;font-weight:700;color:var(--text);line-height:1.2;margin:3px 0 1px}
+.kpi-sub{font-size:10px;color:var(--accent2)}
+
+/* ═══ MATCH TRACKER ═══ */
+#tracker{position:fixed;bottom:16px;left:16px;width:270px;background:var(--panel);backdrop-filter:var(--glass-blur);border:1px solid var(--panel-border);border-radius:14px;padding:12px 14px;z-index:90;box-shadow:0 4px 20px rgba(30,94,255,0.08)}
+#tracker h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:10px}
+.mt-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(30,94,255,0.08)}
+.mt-row:last-child{border:none}
+.mt-dot{width:8px;height:8px;border-radius:50%;background:rgba(30,94,255,0.2);flex-shrink:0;transition:all .4s}
+.mt-dot.done{background:#22c55e}
+.mt-dot.active{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:dpulse 1.2s infinite}
+@keyframes dpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+.mt-name{font-size:11px;color:var(--text);flex:1}
+.mt-time{font-size:10px;color:var(--text2);font-variant-numeric:tabular-nums}
+
+/* ═══ DETAIL PANEL ═══ */
+#detail-panel{position:fixed;top:62px;right:16px;width:240px;background:var(--panel);backdrop-filter:var(--glass-blur);border:1px solid var(--panel-border);border-radius:14px;padding:14px;z-index:90;box-shadow:0 4px 20px rgba(30,94,255,0.08)}
+#detail-panel h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:10px}
+.d-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(30,94,255,0.06);font-size:11px}
+.d-row:last-child{border:none}
+.d-key{color:var(--text2)}.d-val{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.d-val.acc{color:var(--accent)}
+
+/* ═══ TABLE PANEL ═══ */
+#table-panel{position:fixed;bottom:16px;right:16px;width:380px;background:var(--panel);backdrop-filter:var(--glass-blur);border:1px solid var(--panel-border);border-radius:14px;overflow:hidden;z-index:90;max-height:290px;box-shadow:0 4px 20px rgba(30,94,255,0.08)}
+#table-tabs{display:flex;border-bottom:1px solid var(--panel-border)}
+.tab-btn{flex:1;padding:9px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;color:var(--text2);text-align:center;border:none;background:transparent;min-height:36px;transition:all .2s}
+.tab-btn.active,.tab-btn:hover{background:rgba(30,94,255,0.08);color:var(--accent);font-weight:600}
+#table-body{overflow-y:auto;max-height:234px;padding:4px 6px;-webkit-overflow-scrolling:touch}
+#table-body::-webkit-scrollbar{width:4px}
+#table-body::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+.tr-row{display:grid;grid-template-columns:1.2fr 1fr 0.8fr 0.8fr;gap:5px;padding:7px 6px;border-bottom:1px solid rgba(30,94,255,0.05);font-size:10px;align-items:center;cursor:pointer;border-radius:6px;transition:background .15s}
+.tr-row:hover{background:rgba(30,94,255,0.06)}
+.tr-head{color:var(--text2);font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.07em}
+.badge{padding:2px 8px;border-radius:8px;font-size:9px;font-weight:600;text-transform:uppercase;white-space:nowrap}
+.badge.ok{background:rgba(34,197,94,0.12);color:#16a34a}
+.badge.go{background:rgba(30,94,255,0.1);color:var(--accent)}
+.badge.warn{background:rgba(234,179,8,0.12);color:#b45309}
+.badge.hold{background:rgba(239,68,68,0.1);color:#dc2626}
+
+/* ═══ LARGE SCREEN ═══ */
+@media(min-width:1400px){
+  .kpi{min-width:170px;padding:14px 22px}.kpi-val{font-size:28px}
+  #detail-panel{width:270px}#table-panel{width:440px}#tracker{width:300px}
+}
+
+/* ═══ NOTIF / RAIN ═══ */
+#notif{position:fixed;top:62px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:8px 22px;border-radius:20px;font-size:12px;z-index:200;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap;max-width:90vw;box-shadow:0 4px 16px rgba(30,94,255,0.2)}
+#rain-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:5;pointer-events:none;display:none}
+
+/* ═══ MOBILE SEARCH+AREA ═══ */
+#mob-search-bar{display:none;position:fixed;top:50px;left:0;right:0;background:var(--panel);backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--panel-border);padding:6px 10px;z-index:99;flex-direction:column;gap:6px}
+#mob-search-input{width:100%;background:rgba(30,94,255,0.05);border:1px solid var(--panel-border);border-radius:20px;padding:7px 14px;color:var(--text);font-size:12px;outline:none}
+#mob-search-input::placeholder{color:var(--text2)}
+#mob-area-row{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+#mob-area-row::-webkit-scrollbar{display:none}
+.mob-area-btn{background:rgba(30,94,255,0.06);border:1px solid var(--panel-border);border-radius:14px;padding:5px 12px;color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;min-height:32px;transition:all .2s}
+.mob-area-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ═══ BOTTOM SHEET ═══ */
+#bottom-sheet{display:none;position:fixed;bottom:56px;left:0;right:0;background:rgba(255,255,255,0.97);backdrop-filter:var(--glass-blur);border-top:1px solid var(--panel-border);border-radius:16px 16px 0 0;z-index:150;transition:transform .35s cubic-bezier(.4,0,.2,1);transform:translateY(calc(100% - 48px));max-height:calc(80vh - 56px);overflow:hidden}
+#bottom-sheet.expanded{transform:translateY(0)}
+#sheet-handle{display:flex;align-items:center;justify-content:space-between;padding:6px 14px 4px;cursor:pointer;user-select:none}
+#sheet-pill{width:32px;height:3px;border-radius:2px;background:rgba(30,94,255,0.25);margin:0 auto}
+#sheet-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+#sheet-tabs{display:flex;border-bottom:1px solid var(--panel-border);background:rgba(255,255,255,0.7)}
+.stab{flex:1;padding:10px 2px;font-size:10px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;color:var(--text2);text-align:center;border:none;background:transparent;min-height:48px;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.stab.active{background:rgba(30,94,255,0.08);color:var(--accent);border-bottom:2px solid var(--accent);font-weight:600}
+#sheet-body{overflow-y:auto;max-height:calc(80vh - 56px - 48px);padding:4px 10px 16px;-webkit-overflow-scrolling:touch}
+
+/* ═══ BOTTOM NAV ═══ */
+#mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--panel);backdrop-filter:var(--glass-blur);border-top:1px solid var(--panel-border);z-index:120;flex-direction:row;align-items:stretch}
+.mnb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:none;background:transparent;color:var(--text2);font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:4px 2px;min-height:44px;transition:color .2s}
+.mnb.active{color:var(--accent)}.mnb svg{opacity:.6}.mnb.active svg{opacity:1}
+
+/* ═══ MOBILE ═══ */
+@media(max-width:640px){
+  #topbar{padding:0 10px;gap:6px;height:50px}
+  #logo{font-size:14px}#logo svg{width:16px;height:16px}
+  #search-wrap{display:none}#area-switcher{display:none}
+  .spacer{flex:1}
+  #clock-box{font-size:11px;padding:3px 7px}
+  #weather-btn{font-size:10px;padding:3px 8px}
+  #mob-search-bar{display:flex}
+  #kpi-row{top:94px;left:0;right:0;padding:6px 8px;gap:7px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #kpi-row::-webkit-scrollbar{display:none}
+  .kpi{flex:0 0 130px;min-width:130px;padding:8px 12px;border-radius:10px}
+  .kpi-val{font-size:17px}
+  #tracker{display:none}#table-panel{display:none}#detail-panel{display:none}
+  #mob-nav{display:flex}#bottom-sheet{display:block}
+  canvas{height:calc(100% - 104px)!important}
+  #notif{bottom:112px;top:auto}
+}
+@media(max-width:380px){.kpi{flex:0 0 110px;min-width:110px}#clock-box{display:none}}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <a id="logo" href="#">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9" stroke="#1E5EFF" stroke-width="2"/><circle cx="11" cy="11" r="3" fill="#1E5EFF"/><line x1="11" y1="2" x2="11" y2="6" stroke="#1E5EFF" stroke-width="1.5"/></svg>
+    Boundary
+  </a>
+  <div id="search-wrap"><input id="search-box" placeholder="🔍 Search gate, stand, pitch…" autocomplete="off"/></div>
+  <div id="area-switcher">
+    <button class="area-btn active" onclick="flyToArea('field')">Field</button>
+    <button class="area-btn" onclick="flyToArea('stands')">Stands</button>
+    <button class="area-btn" onclick="flyToArea('gates')">Gates</button>
+    <button class="area-btn" onclick="flyToArea('parking')">Parking</button>
+    <button class="area-btn" onclick="flyToArea('metro')">Metro</button>
+  </div>
+  <div class="spacer"></div>
+  <div id="clock-box">14:30</div>
+  <div id="weather-wrap">
+    <button id="weather-btn" onclick="toggleWeatherMenu()">☀️ Clear ▾</button>
+    <div id="weather-menu">
+      <div class="weather-opt active" onclick="setWeather('clear')">☀️ Clear</div>
+      <div class="weather-opt" onclick="setWeather('dew')">🌅 Evening dew</div>
+      <div class="weather-opt" onclick="setWeather('rain')">🌧️ Rain delay</div>
+      <div class="weather-opt" onclick="setWeather('dusk')">🌆 Dusk</div>
+    </div>
+  </div>
+  <button id="daynight-btn" onclick="toggleDayNight()">🌙</button>
+  <div id="alert-dot"></div>
+  <div id="user-av">BD</div>
+</div>
+<div id="mob-search-bar">
+  <input id="mob-search-input" placeholder="🔍 Search gate, stand, pitch…" autocomplete="off"/>
+  <div id="mob-area-row">
+    <button class="mob-area-btn active" onclick="mobAreaBtn(this,'field')">🏏 Field</button>
+    <button class="mob-area-btn" onclick="mobAreaBtn(this,'stands')">🏟️ Stands</button>
+    <button class="mob-area-btn" onclick="mobAreaBtn(this,'gates')">🚪 Gates</button>
+    <button class="mob-area-btn" onclick="mobAreaBtn(this,'parking')">🅿️ Parking</button>
+    <button class="mob-area-btn" onclick="mobAreaBtn(this,'metro')">🚇 Metro</button>
+  </div>
+</div>
+<div id="kpi-row">
+  <div class="kpi"><div class="kpi-label">Attendance</div><div class="kpi-val" id="kpi-att">0</div><div class="kpi-sub">of 68 000 capacity</div></div>
+  <div class="kpi"><div class="kpi-label">Gate Wait</div><div class="kpi-val" id="kpi-wait">0<span style="font-size:13px">min</span></div><div class="kpi-sub">avg entry time</div></div>
+  <div class="kpi"><div class="kpi-label">Live Score</div><div class="kpi-val" id="kpi-score">0/0</div><div class="kpi-sub" id="kpi-overs">0.0 ov</div></div>
+</div>
+<div id="tracker">
+  <h3>Match Tracker</h3>
+  <div class="mt-row"><div class="mt-dot done" id="mt0"></div><div class="mt-name">Gates Open</div><div class="mt-time">12:00</div></div>
+  <div class="mt-row"><div class="mt-dot done" id="mt1"></div><div class="mt-name">Toss</div><div class="mt-time">13:30</div></div>
+  <div class="mt-row"><div class="mt-dot active" id="mt2"></div><div class="mt-name">Powerplay</div><div class="mt-time">14:00</div></div>
+  <div class="mt-row"><div class="mt-dot" id="mt3"></div><div class="mt-name">Innings Break</div><div class="mt-time">17:00</div></div>
+  <div class="mt-row"><div class="mt-dot" id="mt4"></div><div class="mt-name">Chase</div><div class="mt-time">17:30</div></div>
+  <div class="mt-row"><div class="mt-dot" id="mt5"></div><div class="mt-name">Result</div><div class="mt-time">21:00</div></div>
+</div>
+<div id="detail-panel">
+  <h3>Selected</h3>
+  <div class="d-row"><span class="d-key">Object</span><span class="d-val acc" id="d-name">Stadium</span></div>
+  <div class="d-row"><span class="d-key">Status</span><span class="d-val" id="d-status">Match day</span></div>
+  <div class="d-row"><span class="d-key">Occupancy</span><span class="d-val" id="d-occ">—</span></div>
+  <div class="d-row"><span class="d-key">Queue</span><span class="d-val" id="d-queue">—</span></div>
+  <div class="d-row"><span class="d-key">Revenue</span><span class="d-val" id="d-rev">—</span></div>
+</div>
+<div id="table-panel">
+  <div id="table-tabs">
+    <button class="tab-btn active" onclick="showTab('gates')">Gates</button>
+    <button class="tab-btn" onclick="showTab('stalls')">Stalls</button>
+    <button class="tab-btn" onclick="showTab('transport')">Transport</button>
+  </div>
+  <div id="table-body"></div>
+</div>
+<div id="bottom-sheet">
+  <div id="sheet-handle" onclick="toggleSheet()"><span id="sheet-label">Match ▲</span><div id="sheet-pill"></div><span></span></div>
+  <div id="sheet-tabs">
+    <button class="stab active" onclick="showSheetTab('match')">Match</button>
+    <button class="stab" onclick="showSheetTab('live')">Live</button>
+    <button class="stab" onclick="showSheetTab('gates')">Gates</button>
+    <button class="stab" onclick="showSheetTab('stalls')">Stalls</button>
+    <button class="stab" onclick="showSheetTab('transport')">Transport</button>
+  </div>
+  <div id="sheet-body"></div>
+</div>
+<div id="mob-nav">
+  <button class="mnb active" onclick="mobNav(this,'field')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="9" r="2.5" fill="currentColor"/></svg>Field</button>
+  <button class="mnb" onclick="mobNav(this,'stands')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="8" width="14" height="8" rx="1" fill="currentColor" opacity=".7"/><rect x="4" y="4" width="10" height="5" rx="1" fill="currentColor"/></svg>Stands</button>
+  <button class="mnb" onclick="mobNav(this,'gates')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="4" width="5" height="12" rx="1" fill="currentColor" opacity=".7"/><rect x="10" y="4" width="5" height="12" rx="1" fill="currentColor"/></svg>Gates</button>
+  <button class="mnb" onclick="mobNav(this,'parking')"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="3" width="12" height="12" rx="2" fill="currentColor" opacity=".6"/><text x="9" y="13" text-anchor="middle" fill="white" font-size="10" font-weight="700">P</text></svg>Parking</button>
+  <button class="mnb" onclick="toggleSheet()"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="2.5" rx="1" fill="currentColor"/><rect x="2" y="7.5" width="14" height="2.5" rx="1" fill="currentColor"/><rect x="2" y="12" width="14" height="2.5" rx="1" fill="currentColor"/></svg>Data</button>
+</div>
+<canvas id="rain-canvas"></canvas>
+<div id="notif"></div>
+
+<script>
+(function(){
+  function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;s.onerror=function(){var s2=document.createElement('script');s2.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s2.onload=cb;document.head.appendChild(s2)};document.head.appendChild(s)}
+  function loadOC(cb){var s=document.createElement('script');s.src='js/OrbitControls.js';s.onload=cb;s.onerror=function(){var s2=document.createElement('script');s2.src='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';s2.onload=cb;document.head.appendChild(s2)};document.head.appendChild(s)}
+  loadScript('js/three.min.js',function(){loadOC(initApp)});
+})();
+</script>
+<script>
+function initApp(){
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.3;
+document.body.insertBefore(renderer.domElement,document.body.firstChild);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0xd4e8f8);
+scene.fog=new THREE.Fog(0xd4e8f8,200,450);
+
+const camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,600);
+camera.position.set(90,80,110);camera.lookAt(0,0,0);
+
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=0.08;
+controls.maxPolarAngle=Math.PI/2.1;controls.minDistance=25;controls.maxDistance=300;
+
+const _v3=new THREE.Vector3();
+
+// ─── MATERIALS (BRIGHT) ───────────────────────────────────────
+const M={
+  grass:  new THREE.MeshLambertMaterial({color:0x3da33a}),
+  pitch:  new THREE.MeshLambertMaterial({color:0xb8a855}),
+  ground: new THREE.MeshLambertMaterial({color:0xd4c9a8}),
+  concrete:new THREE.MeshLambertMaterial({color:0xe4ddd0}),
+  white:  new THREE.MeshLambertMaterial({color:0xf8f8f0}),
+  accent: new THREE.MeshLambertMaterial({color:0x1E5EFF}),
+  accentG:new THREE.MeshLambertMaterial({color:0x4d82ff,emissive:0x1E5EFF,emissiveIntensity:0.15}),
+  metal:  new THREE.MeshLambertMaterial({color:0x8899aa}),
+  dark:   new THREE.MeshLambertMaterial({color:0x3a3a40}),
+  red:    new THREE.MeshLambertMaterial({color:0xe63946}),
+  yellow: new THREE.MeshLambertMaterial({color:0xf4c430,emissive:0xf4c430,emissiveIntensity:0.2}),
+  skin:   new THREE.MeshLambertMaterial({color:0xe8c9a0}),
+  road:   new THREE.MeshLambertMaterial({color:0xaaa899}),
+  glass:  new THREE.MeshLambertMaterial({color:0x8ab4e8,transparent:true,opacity:0.35}),
+  blue:   new THREE.MeshLambertMaterial({color:0x1E5EFF}),
+  orange: new THREE.MeshLambertMaterial({color:0xff8c00}),
+  cover:  new THREE.MeshLambertMaterial({color:0x2244cc,transparent:true,opacity:0.6}),
+  seatA:  new THREE.MeshLambertMaterial({color:0x1E5EFF}),
+  seatB:  new THREE.MeshLambertMaterial({color:0xf4c430}),
+  black:  new THREE.MeshLambertMaterial({color:0x222222}),
+  green2: new THREE.MeshLambertMaterial({color:0x2e8b57}),
+};
+const SHIRT_COLORS=[0x1E5EFF,0xf4c430,0xff6633,0x22aa44,0xffffff,0xcc2222,0x8844cc,0x33cccc];
+const SMAT=SHIRT_COLORS.map(c=>new THREE.MeshLambertMaterial({color:c}));
+
+function box(w,h,d,mat,x,y,z,ry){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);if(ry)m.rotation.y=ry;m.castShadow=true;m.receiveShadow=true;scene.add(m);return m}
+function cyl(rt,rb,h,seg,mat,x,y,z){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m}
+function grp(){const g=new THREE.Group();scene.add(g);return g}
+function pt(col,int,x,y,z,dist){const l=new THREE.PointLight(col,int,dist);l.position.set(x,y,z);scene.add(l);return l}
+
+// ─── GROUND ────────────────────────────────────────────────────
+const gnd=new THREE.Mesh(new THREE.PlaneGeometry(400,400),M.ground);
+gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
+
+// ─── OVAL FIELD ────────────────────────────────────────────────
+const fieldGeo=new THREE.CylinderGeometry(55,55,0.3,48);
+const field=new THREE.Mesh(fieldGeo,M.grass);field.position.set(0,0.15,0);
+field.receiveShadow=true;scene.add(field);
+// Pitch strip
+box(3,0.15,18,M.pitch,0,0.25,0);
+// Crease markings
+box(4,0.05,0.2,M.white,0,0.35,-8);
+box(4,0.05,0.2,M.white,0,0.35,8);
+// Circle
+const circle=new THREE.Mesh(new THREE.TorusGeometry(25,0.15,8,48),M.white);
+circle.rotation.x=Math.PI/2;circle.position.set(0,0.32,0);scene.add(circle);
+// Boundary rope
+const rope=new THREE.Mesh(new THREE.TorusGeometry(52,0.2,8,48),M.white);
+rope.rotation.x=Math.PI/2;rope.position.set(0,0.2,0);scene.add(rope);
+
+// ─── TIERED STANDS (oval) ──────────────────────────────────────
+const fanInstances=[];
+for(let tier=0;tier<5;tier++){
+  const innerR=58+tier*6;const outerR=innerR+5;const h=4+tier*4;
+  const segments=48;
+  for(let s=0;s<segments;s++){
+    const angle=(s/segments)*Math.PI*2;
+    const cx=Math.cos(angle)*(innerR+2.5);
+    const cz=Math.sin(angle)*(innerR+2.5);
+    // Seat block
+    const seatBlock=new THREE.Mesh(new THREE.BoxGeometry(5,4,5),
+      s%3===0?M.seatA:s%3===1?M.seatB:M.white);
+    seatBlock.position.set(cx,h,cz);
+    seatBlock.rotation.y=-angle;
+    seatBlock.receiveShadow=true;
+    scene.add(seatBlock);
+    // Fans in this block (3 per block)
+    if(s%2===0){
+      for(let f=0;f<3;f++){
+        const fx=cx+Math.cos(angle+0.1*f)*2;
+        const fz=cz+Math.sin(angle+0.1*f)*2;
+        const sm=SMAT[Math.floor(Math.random()*SMAT.length)];
+        const fanBody=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.4,5),sm);
+        fanBody.position.set(fx,h+2.8,fz);scene.add(fanBody);
+        const fanHead=new THREE.Mesh(new THREE.SphereGeometry(0.3,5,4),M.skin);
+        fanHead.position.set(fx,h+3.8,fz);scene.add(fanHead);
+        fanInstances.push({body:fanBody,head:fanHead,baseY:h+2.8,headY:h+3.8,t:Math.random()*6.28});
+      }
+    }
+  }
+}
+
+// ─── 4 FLOODLIGHT TOWERS ───────────────────────────────────────
+const floodPositions=[[-70,0,-70],[70,0,-70],[70,0,70],[-70,0,70]];
+const floodLights=[];
+floodPositions.forEach(([fx,_,fz])=>{
+  cyl(1.5,2,50,8,M.metal,fx,25,fz);
+  // Flood array
+  box(6,2,3,M.dark,fx,50,fz);
+  for(let l=0;l<3;l++){
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.8,1),M.yellow);
+    fl.position.set(fx-2+l*2,51,fz);scene.add(fl);
+  }
+  const light=pt(0xfff8e0,3,fx,48,fz,120);
+  floodLights.push(light);
+  light.visible=false;// off during day
+});
+
+// ─── SCOREBOARD ────────────────────────────────────────────────
+const sb=box(20,12,2,M.dark,0,12,64);
+box(20,1,2,M.accent,0,18.5,64);
+// Score text area (bright panel)
+box(18,8,0.3,M.white,0,13,63.5);
+
+// ─── ENTRY GATES ───────────────────────────────────────────────
+const gateAngles=[0,Math.PI/2,Math.PI,Math.PI*1.5];
+const gateNames=['Gate A','Gate B','Gate C','Gate D'];
+gateAngles.forEach((a,i)=>{
+  const gx=Math.cos(a)*80;const gz=Math.sin(a)*80;
+  // Gate structure
+  box(12,6,4,M.white,gx,3,gz,a);
+  box(12,1,4,M.accent,gx,6.5,gz,a);
+  // Turnstiles (3)
+  for(let t=0;t<3;t++){
+    box(2,3,0.5,M.metal,gx+Math.cos(a+Math.PI/2)*(t-1)*3,1.5,
+        gz+Math.sin(a+Math.PI/2)*(t-1)*3,a);
+  }
+});
+
+// ─── FOOD STALLS ───────────────────────────────────────────────
+const stallPositions=[[75,0,-20],[75,0,20],[-75,0,-20],[-75,0,20],[20,0,75],[-20,0,75]];
+stallPositions.forEach(([sx,_,sz],i)=>{
+  box(8,5,5,M.white,sx,2.5,sz);
+  box(8,0.5,5,i%2===0?M.orange:M.red,sx,5.3,sz);
+  // Queue line (3 fans)
+  for(let q=0;q<3;q++){
+    const sm=SMAT[Math.floor(Math.random()*SMAT.length)];
+    cyl(0.3,0.4,1.4,5,sm,sx+4+q*2,0.7,sz);
+  }
+});
+
+// ─── TEAM BUSES ────────────────────────────────────────────────
+function buildBus(bx,bz,col,name){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(14,4,5),col);
+  body.position.set(0,2.5,0);body.castShadow=true;g.add(body);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(14,1,5),M.white);
+  roof.position.set(0,5,0);g.add(roof);
+  const windshield=new THREE.Mesh(new THREE.BoxGeometry(0.3,3,4),M.glass);
+  windshield.position.set(7.1,3.2,0);g.add(windshield);
+  for(let w=0;w<4;w++){
+    const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.8,0.8,0.5,8),M.black);
+    wh.rotation.z=Math.PI/2;wh.position.set(w<2?-5:5,0.8,w%2===0?-2.5:2.5);g.add(wh);
+  }
+  g.position.set(bx,0,bz);g.rotation.y=Math.atan2(-bx,-bz);
+  g.userData={type:'vehicle',name};scene.add(g);return g;
+}
+const bus1=buildBus(-90,0,M.blue,'Team India Bus');
+const bus2=buildBus(90,0,M.yellow,'Team Australia Bus');
+const busList=[bus1,bus2];
+
+// ─── PARKING LOT ───────────────────────────────────────────────
+for(let row=0;row<3;row++){
+  for(let col=0;col<8;col++){
+    const cx=-80+col*8;const cz=-85-row*5;
+    const carCol=SMAT[Math.floor(Math.random()*SMAT.length)];
+    box(4,2,2.5,carCol,cx,1,cz);
+    box(3,1.2,2.3,M.glass,cx-0.3,2.1,cz);
+  }
+}
+// Parking lot ground
+box(70,0.15,20,M.road,0,0.08,-90);
+
+// ─── METRO STATION ─────────────────────────────────────────────
+box(30,6,10,M.white,0,3,-110);
+box(30,1,10,M.accent,0,6.5,-110);
+box(20,4,0.3,M.glass,0,3.5,-104.8);
+// Platform
+box(35,0.5,4,M.concrete,0,0.25,-118);
+// Train
+box(35,4,5,M.accent,0,2.5,-122);
+box(30,3,4,M.glass,0,3,-122);
+
+// ─── ROADS ─────────────────────────────────────────────────────
+box(200,0.2,8,M.road,0,0.1,-100);
+box(8,0.2,200,M.road,90,0.1,0);
+box(8,0.2,200,M.road,-90,0.1,0);
+
+// ─── PLAYERS ON FIELD ──────────────────────────────────────────
+const players=[];
+// Batting team (2 batsmen)
+for(let b=0;b<2;b++){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.5,6),M.white);body.position.set(0,1,0);g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.35,6,5),M.skin);head.position.set(0,2,0);g.add(head);
+  const bat=new THREE.Mesh(new THREE.BoxGeometry(0.2,1.5,0.15),M.pitch);bat.position.set(0.5,1,0);g.add(bat);
+  g.position.set(b===0?0:-1,0,b===0?-7:7);
+  g.userData={type:'player',name:b===0?'Batsman (Striker)':'Batsman (Non-striker)'};
+  scene.add(g);players.push(g);
+}
+// Bowler
+{const g=new THREE.Group();
+const body=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.5,6),M.blue);body.position.set(0,1,0);g.add(body);
+const head=new THREE.Mesh(new THREE.SphereGeometry(0.35,6,5),M.skin);head.position.set(0,2,0);g.add(head);
+g.position.set(0,0,15);g.userData={type:'player',name:'Bowler'};scene.add(g);players.push(g);}
+// Fielders (9)
+for(let f=0;f<9;f++){
+  const angle=(f/9)*Math.PI*2;
+  const r=20+Math.random()*20;
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.5,6),M.blue);body.position.set(0,1,0);g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.35,6,5),M.skin);head.position.set(0,2,0);g.add(head);
+  g.position.set(Math.cos(angle)*r,0,Math.sin(angle)*r);
+  g.userData={type:'player',name:'Fielder '+(f+1),baseAngle:angle,radius:r};
+  scene.add(g);players.push(g);
+}
+
+// ─── BALL ──────────────────────────────────────────────────────
+const ball=new THREE.Mesh(new THREE.SphereGeometry(0.3,8,6),M.red);
+ball.position.set(0,0.5,14);ball.castShadow=true;scene.add(ball);
+
+// ─── LIGHTING (BRIGHT) ────────────────────────────────────────
+const ambient=new THREE.AmbientLight(0xfff8ee,2.0);scene.add(ambient);
+const sun=new THREE.DirectionalLight(0xfff0c0,3.0);
+sun.position.set(80,130,60);sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-120;sun.shadow.camera.right=120;
+sun.shadow.camera.top=120;sun.shadow.camera.bottom=-120;
+scene.add(sun);
+const fill=new THREE.DirectionalLight(0x88aacc,0.8);fill.position.set(-60,40,80);scene.add(fill);
+// Scoreboard glow
+pt(0xffffff,2,0,14,62,40);
+
+// ─── STARS (night) ─────────────────────────────────────────────
+const starGeo=new THREE.BufferGeometry();const sv=[];
+for(let s=0;s<1500;s++){sv.push((Math.random()-.5)*500,80+Math.random()*200,(Math.random()-.5)*500);}
+starGeo.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
+const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:0.5}));
+scene.add(stars);stars.visible=false;
+
+// ─── RAIN ──────────────────────────────────────────────────────
+const rainCanvas=document.getElementById('rain-canvas');
+const rainCtx=rainCanvas.getContext('2d');let rainDrops=[];
+function initRain(){rainCanvas.width=window.innerWidth;rainCanvas.height=window.innerHeight;rainDrops=[];for(let r=0;r<400;r++)rainDrops.push({x:Math.random()*rainCanvas.width,y:Math.random()*rainCanvas.height,len:10+Math.random()*18,speed:7+Math.random()*6});}
+function drawRain(){rainCanvas.style.display='block';rainCtx.clearRect(0,0,rainCanvas.width,rainCanvas.height);rainCtx.strokeStyle='rgba(100,130,180,0.35)';rainCtx.lineWidth=1;rainDrops.forEach(d=>{rainCtx.beginPath();rainCtx.moveTo(d.x,d.y);rainCtx.lineTo(d.x+1.5,d.y+d.len);rainCtx.stroke();d.y+=d.speed;d.x+=1;if(d.y>rainCanvas.height){d.y=-20;d.x=Math.random()*rainCanvas.width;}});}
+
+// ─── PITCH COVERS (rain delay) ─────────────────────────────────
+const covers=box(12,0.3,20,M.cover,0,0.5,0);
+covers.visible=false;
+
+// ─── MATCH SIMULATION ──────────────────────────────────────────
+let runs=0;let wickets=0;let balls=0;let overs=0;
+let attendance=42500;let gateWait=4.2;
+let lastTime=0;let frameCount=0;let domTimer=0;
+let currentWeather='clear';let isNight=false;
+let bowlPhase='run';let bowlTimer=0;let sixEvent=false;let selectedObj=null;
+
+// Crowd cheering animation
+let crowdJump=0;let crowdTarget=0;
+
+function deliverBall(){
+  const outcome=Math.random();
+  if(outcome<0.35){runs+=0;}// dot
+  else if(outcome<0.55){runs+=1;balls++;}
+  else if(outcome<0.7){runs+=2;balls++;}
+  else if(outcome<0.82){runs+=4;balls++;notify('FOUR! '+runs+'/'+wickets);}
+  else if(outcome<0.92){runs+=6;balls++;sixEvent=true;crowdTarget=2;notify('SIX! 🎉 '+runs+'/'+wickets);}
+  else{wickets=Math.min(wickets+1,10);balls++;notify('WICKET! '+runs+'/'+wickets);}
+  overs=Math.floor(balls/6)+parseFloat((balls%6/10).toFixed(1));
+  if(attendance<67800)attendance+=Math.floor(Math.random()*50);
+  gateWait=Math.max(1,4.2-balls*0.02+Math.random()*0.5);
+}
+
+function notify(msg){const el=document.getElementById('notif');el.textContent=msg;el.style.opacity=1;setTimeout(()=>el.style.opacity=0,3000);}
+
+// ─── WEATHER ───────────────────────────────────────────────────
+function setWeather(w){
+  currentWeather=w;
+  document.querySelectorAll('.weather-opt').forEach(o=>o.classList.toggle('active',o.textContent.toLowerCase().includes(w.substring(0,3))));
+  const labels={clear:'☀️ Clear',dew:'🌅 Dew',rain:'🌧️ Rain',dusk:'🌆 Dusk'};
+  document.getElementById('weather-btn').textContent=(labels[w]||w)+' ▾';
+  document.getElementById('weather-menu').classList.remove('open');
+  if(w==='clear'){scene.fog=new THREE.Fog(0xd4e8f8,200,450);scene.background=new THREE.Color(0xd4e8f8);ambient.intensity=2.0;sun.intensity=3.0;covers.visible=false;rainCanvas.style.display='none';}
+  else if(w==='dew'){scene.fog=new THREE.Fog(0xe8d8c0,150,350);scene.background=new THREE.Color(0xe8d8c0);ambient.intensity=1.5;sun.intensity=1.5;sun.color.set(0xffcc88);covers.visible=false;rainCanvas.style.display='none';}
+  else if(w==='rain'){scene.fog=new THREE.Fog(0xb0b8c8,60,200);scene.background=new THREE.Color(0xb0b8c8);ambient.intensity=1.0;sun.intensity=0.5;covers.visible=true;initRain();notify('🌧️ Rain delay — covers on');}
+  else if(w==='dusk'){scene.fog=new THREE.Fog(0x2a3050,100,300);scene.background=new THREE.Color(0x2a3050);ambient.intensity=0.6;sun.intensity=0.3;sun.color.set(0xff8855);floodLights.forEach(l=>l.visible=true);covers.visible=false;rainCanvas.style.display='none';}
+}
+function toggleWeatherMenu(){document.getElementById('weather-menu').classList.toggle('open')}
+function toggleDayNight(){
+  isNight=!isNight;
+  document.getElementById('daynight-btn').textContent=isNight?'☀️':'🌙';
+  if(isNight){scene.background=new THREE.Color(0x0a1028);scene.fog=new THREE.Fog(0x0a1028,100,300);ambient.intensity=0.4;sun.intensity=0.1;stars.visible=true;floodLights.forEach(l=>l.visible=true);}
+  else{scene.background=new THREE.Color(0xd4e8f8);scene.fog=new THREE.Fog(0xd4e8f8,200,450);ambient.intensity=2.0;sun.intensity=3.0;sun.color.set(0xfff0c0);stars.visible=false;floodLights.forEach(l=>l.visible=false);}
+}
+
+// ─── SELECTION ─────────────────────────────────────────────────
+const raycaster=new THREE.Raycaster();const mouse=new THREE.Vector2();let lastDrag=0;
+renderer.domElement.addEventListener('click',e=>{if(Date.now()-lastDrag<200)return;mouse.x=(e.clientX/window.innerWidth)*2-1;mouse.y=-(e.clientY/window.innerHeight)*2+1;raycaster.setFromCamera(mouse,camera);const hits=raycaster.intersectObjects(scene.children,true);if(hits.length){let o=hits[0].object;while(o.parent&&!o.userData.type)o=o.parent;if(o.userData.type)selectObj(o);}});
+renderer.domElement.addEventListener('mouseup',()=>lastDrag=Date.now());
+renderer.domElement.addEventListener('touchend',()=>lastDrag=Date.now());
+function selectObj(o){selectedObj=o;document.getElementById('d-name').textContent=o.userData.name||'—';document.getElementById('d-status').textContent='Active';_v3.setFromMatrixPosition(o.matrixWorld);controls.target.lerp(_v3,0.4);camera.position.set(_v3.x+25,_v3.y+20,_v3.z+30);}
+
+// ─── FLY TO ────────────────────────────────────────────────────
+const areas={field:{p:[0,50,70],l:[0,0,0]},stands:{p:[80,60,80],l:[0,10,0]},gates:{p:[80,40,100],l:[80,0,80]},parking:{p:[0,40,-120],l:[0,0,-90]},metro:{p:[0,35,-140],l:[0,2,-115]}};
+let flyTgt=null;let flyLook=null;
+function flyToArea(a){document.querySelectorAll('.area-btn').forEach(b=>b.classList.remove('active'));const t=areas[a];if(!t)return;flyTgt=new THREE.Vector3(...t.p);flyLook=new THREE.Vector3(...t.l);}
+
+// ─── TABLE DATA ────────────────────────────────────────────────
+let currentTab='gates';
+const tableData={
+  gates:[['Gate A','North','12 450','Open'],['Gate B','East','8 230','Open'],['Gate C','South','11 180','Open'],['Gate D','West','10 640','Open']],
+  stalls:[['Curry House','North','320 served','Busy'],['Chai Point','East','480 served','Normal'],['Ice Cream Bar','South','210 served','Quiet'],['Beer Garden','West','540 served','Busy'],['Biryani Corner','North','280 served','Normal'],['Popcorn Stand','South','150 served','Quiet']],
+  transport:[['Metro Line 1','Inbound','6 min','Running'],['Bus Route 42','Circular','10 min','Running'],['Team Bus IND','VIP Gate','Arrived','Parked'],['Team Bus AUS','VIP Gate','Arrived','Parked'],['Taxi Rank','Gate A','12 cars','Available']],
+};
+const tableHeaders={gates:['Gate','Location','Scans','Status'],stalls:['Name','Zone','Sales','Status'],transport:['Service','Route','ETA','Status']};
+function renderTable(){const body=document.getElementById('table-body');const hdr=tableHeaders[currentTab];const rows=tableData[currentTab];const bm={Open:'ok',Running:'go',Busy:'warn',Normal:'ok',Quiet:'hold',Arrived:'ok',Parked:'go',Available:'ok'};let html=`<div class="tr-row tr-head">${hdr.map(h=>`<span>${h}</span>`).join('')}</div>`;rows.forEach(r=>{const bc=bm[r[3]]||'hold';html+=`<div class="tr-row">${r.map((c,i)=>i===3?`<span class="badge ${bc}">${c}</span>`:`<span>${c}</span>`).join('')}</div>`;});body.innerHTML=html;}
+renderTable();
+
+// ─── MOBILE SHEET ──────────────────────────────────────────────
+let sheetOpen=false;let currentSheetTab='match';
+function toggleSheet(){sheetOpen=!sheetOpen;document.getElementById('bottom-sheet').classList.toggle('expanded',sheetOpen);document.getElementById('sheet-label').textContent=sheetOpen?'Match ▼':'Match ▲';if(sheetOpen)renderSheet();}
+function showSheetTab(tab){currentSheetTab=tab;document.querySelectorAll('.stab').forEach(b=>{const fn=b.getAttribute('onclick')||'';b.classList.toggle('active',fn.includes("'"+tab+"'"));});renderSheet();if(!sheetOpen)toggleSheet();}
+function renderSheet(){
+  const el=document.getElementById('sheet-body');if(!el)return;
+  if(currentSheetTab==='match'){
+    const steps=[{n:'Gates Open',t:'12:00',done:true},{n:'Toss',t:'13:30',done:true},{n:'Powerplay',t:'14:00',done:false,active:true},{n:'Innings Break',t:'17:00',done:false},{n:'Chase',t:'17:30',done:false},{n:'Result',t:'21:00',done:false}];
+    el.innerHTML=`<div style="padding:8px 4px 2px;display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--text2);text-transform:uppercase">Match Tracker</span><span style="font-size:12px;font-weight:700;color:var(--accent)">${runs}/${wickets} (${overs} ov)</span></div>
+    ${steps.map(s=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 10px;border-bottom:1px solid rgba(30,94,255,0.06)">
+      <div style="width:10px;height:10px;border-radius:50%;background:${s.done?'#22c55e':s.active?'var(--accent)':'rgba(30,94,255,0.15)'};${s.active?'box-shadow:0 0 8px var(--accent)':''}"></div>
+      <span style="flex:1;font-size:12px;color:var(--text)">${s.n}</span>
+      <span style="font-size:11px;color:var(--text2)">${s.t}</span></div>`).join('')}`;
+  } else if(currentSheetTab==='live'){
+    el.innerHTML=`<div style="padding:10px 4px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${[['Score',runs+'/'+wickets],['Overs',overs.toFixed(1)],['Attendance',attendance.toLocaleString()],['Gate Wait',gateWait.toFixed(1)+' min'],['Run Rate',(balls>0?(runs/(balls/6)).toFixed(1):'0.0')],['Wickets Left',(10-wickets)+'']].map(([k,v])=>`<div style="background:rgba(30,94,255,0.05);border:1px solid var(--panel-border);border-radius:10px;padding:11px 12px">
+        <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${k}</div>
+        <div style="font-size:18px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums">${v}</div></div>`).join('')}</div>`;
+  } else {
+    const tData=tableData[currentSheetTab]||tableData.gates;
+    const hdr=tableHeaders[currentSheetTab]||tableHeaders.gates;
+    const bm={Open:'ok',Running:'go',Busy:'warn',Normal:'ok',Quiet:'hold',Arrived:'ok',Parked:'go',Available:'ok'};
+    let html=`<div style="display:grid;grid-template-columns:1.2fr 1fr 0.8fr 0.9fr;gap:4px;padding:8px 6px 4px;border-bottom:1px solid var(--panel-border);font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-weight:600">${hdr.map(h=>`<span>${h}</span>`).join('')}</div>`;
+    tData.forEach(r=>{const bc=bm[r[3]]||'hold';html+=`<div style="display:grid;grid-template-columns:1.2fr 1fr 0.8fr 0.9fr;gap:4px;padding:9px 6px;border-bottom:1px solid rgba(30,94,255,0.05);font-size:10px;align-items:center">${r.map((c,i)=>i===3?`<span class="badge ${bc}">${c}</span>`:`<span style="color:${i===0?'var(--text)':'var(--text2)'}">${c}</span>`).join('')}</div>`;});
+    el.innerHTML=`<div style="padding:0 2px">${html}</div>`;
+  }
+}
+setInterval(()=>{if(sheetOpen&&currentSheetTab==='live')renderSheet();},1000);
+renderSheet();
+
+// ─── HELPERS ───────────────────────────────────────────────────
+function showTab(tab){currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase()===tab));renderTable();}
+function mobNav(el,a){document.querySelectorAll('.mnb').forEach(b=>b.classList.remove('active'));el.classList.add('active');flyToArea(a);}
+function mobAreaBtn(el,a){document.querySelectorAll('.mob-area-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');flyToArea(a);}
+document.getElementById('search-box').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=e.target.value.toLowerCase();if(q.includes('field')||q.includes('pitch'))flyToArea('field');else if(q.includes('stand'))flyToArea('stands');else if(q.includes('gate'))flyToArea('gates');else if(q.includes('park'))flyToArea('parking');else if(q.includes('metro'))flyToArea('metro');e.target.value='';});
+document.getElementById('mob-search-input').addEventListener('keydown',function(e){if(e.key!=='Enter')return;const q=e.target.value.toLowerCase();if(q.includes('field')||q.includes('pitch'))flyToArea('field');else if(q.includes('stand'))flyToArea('stands');else if(q.includes('gate'))flyToArea('gates');else if(q.includes('park'))flyToArea('parking');else if(q.includes('metro'))flyToArea('metro');e.target.value='';e.target.blur();});
+window.flyToArea=flyToArea;window.setWeather=setWeather;window.toggleWeatherMenu=toggleWeatherMenu;
+window.toggleDayNight=toggleDayNight;window.showTab=showTab;window.toggleSheet=toggleSheet;
+window.showSheetTab=showSheetTab;window.mobNav=mobNav;window.mobAreaBtn=mobAreaBtn;
+
+// ─── MAIN LOOP ─────────────────────────────────────────────────
+function animate(now){
+  requestAnimationFrame(animate);
+  const dt=Math.min((now-lastTime)/1000,0.05);lastTime=now;frameCount++;
+  controls.update();
+
+  if(flyTgt){camera.position.lerp(flyTgt,0.05);controls.target.lerp(flyLook,0.05);if(camera.position.distanceTo(flyTgt)<1)flyTgt=null;}
+
+  // ── Bowl simulation ──────────────────────────────────────────
+  bowlTimer+=dt;
+  if(bowlPhase==='run'){
+    const bowler=players[2];
+    bowler.position.z=15-Math.min(bowlTimer*8,10);
+    if(bowlTimer>1.2){bowlPhase='deliver';bowlTimer=0;}
+  } else if(bowlPhase==='deliver'){
+    ball.position.z=14-bowlTimer*20;ball.position.y=0.5+Math.sin(bowlTimer*5)*1.5;
+    if(bowlTimer>0.7){deliverBall();bowlPhase='react';bowlTimer=0;}
+  } else if(bowlPhase==='react'){
+    if(sixEvent){
+      ball.position.y=0.5+bowlTimer*12;ball.position.z=-8-bowlTimer*15;
+      crowdTarget=2;
+      if(bowlTimer>1.5)sixEvent=false;
+    }
+    if(bowlTimer>3){bowlPhase='run';bowlTimer=0;ball.position.set(0,0.5,14);players[2].position.z=15;}
+  }
+
+  // ── Crowd animation (jump on six) ───────────────────────────
+  crowdJump+=(crowdTarget-crowdJump)*0.05;
+  crowdTarget*=0.97;
+  if(frameCount%3===0){
+    fanInstances.forEach(f=>{
+      f.body.position.y=f.baseY+crowdJump+Math.sin(now*0.005+f.t)*0.15;
+      f.head.position.y=f.headY+crowdJump+Math.sin(now*0.005+f.t)*0.15;
+    });
+  }
+
+  // ── Fielder sway ─────────────────────────────────────────────
+  players.forEach(p=>{if(p.userData.baseAngle!==undefined){p.position.x=Math.cos(p.userData.baseAngle+Math.sin(now*0.0008)*0.05)*p.userData.radius;p.position.z=Math.sin(p.userData.baseAngle+Math.sin(now*0.0008)*0.05)*p.userData.radius;}});
+
+  // ── Rain ─────────────────────────────────────────────────────
+  if(currentWeather==='rain')drawRain();
+
+  // ── DOM (500ms) ──────────────────────────────────────────────
+  domTimer+=dt;
+  if(domTimer>=0.5){domTimer=0;
+    document.getElementById('kpi-att').textContent=attendance.toLocaleString();
+    document.getElementById('kpi-wait').innerHTML=gateWait.toFixed(1)+'<span style="font-size:13px">min</span>';
+    document.getElementById('kpi-score').textContent=runs+'/'+wickets;
+    document.getElementById('kpi-overs').textContent=overs.toFixed(1)+' ov';
+  }
+
+  renderer.render(scene,camera);
+}
+window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);if(currentWeather==='rain')initRain();});
+notify('🏏 Boundary — Match day live!');
+requestAnimationFrame(animate);
+}// end initApp
+</script>
+</body>
+</html>
